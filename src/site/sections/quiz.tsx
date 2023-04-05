@@ -4,10 +4,10 @@ import { Button } from "../components/Buttons/button";
 import Modal from "../components/Modal/modal";
 
 interface Result {
+    questions?: any;
     score: number;
     correctAnswers: number;
     wrongAnswers: number;
-    questionCount: number;
     passed: boolean;
     showModal: boolean;
 }
@@ -19,15 +19,40 @@ const Quiz: React.FC = () => {
         score: 0,
         correctAnswers: 0,
         wrongAnswers: 0,
-        questionCount: 0,
         passed: false,
         showModal: false,
-    }); const [shuffledQuestions, setShuffledQuestions] = useState<any[]>([]);
+    });
+    const [timeRemaining, setTimeRemaining] = useState<number>(30);
+
+    // console.log(result.questionCount)
+
+    const [shuffledQuestions, setShuffledQuestions] = useState<any[]>([]);
 
     useEffect(() => {
         // Shuffle questions array and set to state
         setShuffledQuestions(shuffleArray(quiz.questions));
     }, []);
+
+    // Timer for each question (30 seconds)
+    useEffect(() => {
+        if (isQuizFinished) return;
+        // Set the initial time remaining
+        setTimeRemaining(30);
+        const timer = setInterval(() => {
+            setTimeRemaining((prev) => {
+                // Update time remaining every second
+                if (prev > 0) return prev - 1;
+                else {
+                    // Time is up, move to next question
+                    onClickNext();
+                    return 0;
+                }
+            });
+        }, 1000);
+        return () => {
+            clearInterval(timer);
+        };
+    }, [activeQuestion]);
 
     const { question, choices } = shuffledQuestions[activeQuestion] || {};
     const correctAnswer = shuffledQuestions[activeQuestion]?.correctAnswer;
@@ -41,7 +66,6 @@ const Quiz: React.FC = () => {
                 score: isCorrect ? prev.score + 5 : prev.score,
                 correctAnswers: isCorrect ? prev.correctAnswers + 1 : prev.correctAnswers,
                 wrongAnswers: isCorrect ? prev.wrongAnswers : prev.wrongAnswers + 1,
-                questionCount: prev.questionCount + 1,
             };
         });
 
@@ -71,7 +95,6 @@ const Quiz: React.FC = () => {
             score: 0,
             correctAnswers: 0,
             wrongAnswers: 0,
-            questionCount: 0,
             passed: false,
             showModal: false,
         });
@@ -92,18 +115,26 @@ const Quiz: React.FC = () => {
 
     return (
         <div className="w-full p-5 grid gap-2">
-            <div className="text-3xl font-bold">Quiz</div>
+
             {question && (
                 <div>
-                    <div className="text-xl font-semibold">{question}</div>
-                    {shuffledQuestions[activeQuestion].choices.map((val: string, key: number) => {
+                    <div className="text-3xl font-bold">Quiz</div>
+                    <div className="text-xl font-semibold">
+                        <div>
+                            {question}
+                        </div>
+                        <div className="flex-1 text-lg font-semibold">
+                            Time Remaining: {timeRemaining} seconds
+                        </div>
+                    </div>
+                    {shuffledQuestions[activeQuestion]?.choices.map((val: string, key: number) => {
                         return (
                             <div className="m-2" key={key}>
                                 <input
                                     className="m-2"
                                     type="radio"
                                     name={question}
-                                    onClick={() => onAnswerSelected(val)}
+                                    onChange={() => onAnswerSelected(val)}
                                     value={val}
                                     checked={selectedAnswer === val}
                                 />
@@ -111,32 +142,84 @@ const Quiz: React.FC = () => {
                             </div>
                         );
                     })}
+                    <Button
+                        className="w-fit mx-5 my-5"
+                        action={onClickNext}
+                        text={isQuizFinished ? "Show Result" : "Next"}
+                        disabled={!selectedAnswer}
+                    />
                 </div>
             )}
-            <Button
-                className="m-5 w-fit"
-                action={onClickNext}
-                text="Next"
-                disabled={!selectedAnswer}
-            />
-            {isQuizFinished && (
+
+            <div className="flex gap-5 my-5 mx-5">
+                {isQuizFinished && (
+                    <div>
+                        <div className="text-3xl font-bold">
+                            {result.passed ? "Congratulations!" : "Sorry!"}
+                        </div>
+                        <div>
+                            You got {result.correctAnswers} questions right.
+                        </div>
+                        <div>You got {result.score} out of {quiz.questions.length * 5} marks.</div>
+                        {result.passed ? (
+                            <div>
+                                <p>Congratulations, you passed the quiz!</p>
+                                <Button
+                                    className="w-fit my-5 mx-5"
+                                    action={onTryAgain}
+                                    text="Try another Quiz"
+                                    disabled={!selectedAnswer}
+                                />
+                            </div>
+                        ) : (
+                            <div>Unfortunately, you did not pass the quiz. Please try again.</div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            <div className="flex my-5 mx-5 gap-5">
                 <Button
+                    className="w-fit"
                     action={onShowResult}
                     text="Show Result"
                     disabled={result.showModal}
                 />
-            )}
+                {
+                    result.passed ?
+                        null
+                        :
+                        <Button
+                            className="w-fit"
+                            action={onTryAgain}
+                            text="Try Again"
+                            disabled={!result.passed}
+                        />
+                }
+            </div>
+            <div className="flex gap-5 my-5 mx-5">
+                <div className="flex-1 text-lg font-semibold">
+                    Score: {result.score} marks
+                </div>
+                <div className="flex-1 text-lg font-semibold">
+                    Correct Answers: {result.correctAnswers}
+                </div>
+                <div className="flex-1 text-lg font-semibold">
+                    Wrong Answers: {result.wrongAnswers}
+                </div>
+            </div>
+
             {result.showModal && (
                 <Modal
                     onClose={() => setResult((prev) => ({ ...prev, showModal: false }))}
                     score={result.score}
-                    totalQuestions={result.questionCount}
+                    totalQuestions={quiz.questions.length}
                 >
                     <div className="text-2xl font-bold">
                         {result.passed ? "Congratulations!" : "Sorry!"}
                     </div>
                     <div>
-                        You got {result.correctAnswers} out of {result.questionCount} questions right.
+                        You got {result.correctAnswers} out of {quiz.questions.length} questions right.
                     </div>
                     <div>Your score is {result.score}.</div>
                     {result.passed ? (
@@ -147,8 +230,9 @@ const Quiz: React.FC = () => {
                     <Button className="w-fit m-2" action={onTryAgain} text="Try Again" />
                 </Modal>
             )}
-        </div>
-    )
-}
 
-export default Quiz
+        </div>
+    );
+};
+
+export default Quiz;
