@@ -20,7 +20,7 @@ const Modal = ({ onClose, score, totalQuestions, children, className }: ModalPro
                     You got {score} out of {totalQuestions * 5}.
                 </div>
                 <div className="justify-center items-center grid">{children}</div>
-                <div className="justify-end mt-5 grid">
+                <div className="justify-end grid">
                     <Button action={onClose} text="Close" />
                 </div>
             </div>

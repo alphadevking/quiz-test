@@ -2,6 +2,7 @@ export const quiz = {
     topic: 'Q&A',
     level: 'Beginner',
     scorePerQuestion: 5,
+    time: 30,
     questions: [
         {
             type: 'multiple_choice',
