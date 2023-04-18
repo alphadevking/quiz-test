@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { quiz } from ".";
+import quiz from "../../../data/quiz.json";
 import { Button } from "../components/Buttons/button";
 import Modal from "../components/Modal/modal";
 import Link from "next/link";
@@ -17,24 +17,25 @@ const Quiz: React.FC = () => {
     const [activeQuestion, setActiveQuestion] = useState<number>(0);
     const [selectedAnswer, setSelectedAnswer] = useState<string>("");
     const [remainingTime, setRemainingTime] = useState<number>(quiz.time);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const timerRef = useRef<number | NodeJS.Timeout | null>(null);
     const [result, setResult] = useState<Result>({
         score: 0,
         correctAnswers: 0,
         passed: false,
         showModal: false,
     });
-    
+
     const [shuffledQuestions, setShuffledQuestions] = useState<any[]>([]);
+
     useEffect(() => {
         if (quizStarted) {
             setShuffledQuestions(shuffleArray(quiz.questions));
         }
     }, [quizStarted]);
-    
+
     const { question, choices } = shuffledQuestions[activeQuestion] || {};
     const correctAnswer = shuffledQuestions[activeQuestion]?.correctAnswer;
-    
+
     const onClickNext = () => {
         setResult((prev) => {
             const isCorrect = selectedAnswer === correctAnswer;
@@ -44,53 +45,76 @@ const Quiz: React.FC = () => {
                 correctAnswers: isCorrect ? prev.correctAnswers + 1 : prev.correctAnswers,
             };
         });
-        setActiveQuestion((prev) => prev + 1);
-        setSelectedAnswer("");
+        if (!isQuizFinished) {
+            setActiveQuestion((prev) => prev + 1);
+            setSelectedAnswer("");
+        } else {
+            onShowResult();
+        }
     };
-    
+
     const onAnswerSelected = (answer: string) => {
         setSelectedAnswer(answer);
     };
-    
+
     const onStartQuiz = () => {
         setQuizStarted(true);
     };
-    
-    const isQuizFinished = activeQuestion >= shuffledQuestions.length;
-    const onShowResult = () => {
-        setResult((prev) => ({
-            ...prev,
-            showModal: true,
-            passed: prev.score >= 50,
-        }));
+
+    const resetQuiz = () => {
+        setQuizStarted(false);
+        setActiveQuestion(0);
+        setSelectedAnswer("");
+        setResult({
+            score: 0,
+            correctAnswers: 0,
+            passed: false,
+            showModal: false,
+        });
+        setRemainingTime(quiz.time); // Reset the timer
+        // clearInterval(timerRef.current);
+    };
+
+    const onStopQuiz = () => {
+        const shouldStop = window.confirm("Are you sure you want to stop the quiz?");
+
+        if (shouldStop) {
+            onShowResult();
+            resetQuiz();
+        }
     };
 
     useEffect(() => {
-        if (quizStarted) {
-            timerRef.current = setInterval(() => {
-                setRemainingTime((prev) => prev - 1);
-            }, 1000);
+        if (activeQuestion >= shuffledQuestions.length) {
+            onShowResult(); // Call the onShowResult function when the quiz is finished
         }
-        return () => {
-            if (timerRef.current) {
-                clearInterval(timerRef.current);
-            }
-        };
-    }, [quizStarted]);
-    
+    }, [activeQuestion, shuffledQuestions]);
+
+    const isQuizFinished = activeQuestion >= shuffledQuestions.length;
+    const onShowResult = () => {
+        const totalPossibleScore = quiz.questions.length * quiz.scorePerQuestion;
+        const minimumPassScore = totalPossibleScore * 0.5;
+
+        setResult((prev) => ({
+            ...prev,
+            showModal: true,
+            passed: (prev.score >= minimumPassScore),
+        }));
+    };
+
     const onTryAgain = () => {
-    setActiveQuestion(0);
-    setSelectedAnswer("");
-    setResult({
-        score: 0,
-        correctAnswers: 0,
-        passed: false,
-        showModal: false,
-    });
-    setRemainingTime(quiz.time); // Reset the timer
-    setShuffledQuestions(shuffleArray(quiz.questions));
-};
-    
+        setActiveQuestion(0);
+        setSelectedAnswer("");
+        setResult({
+            score: 0,
+            correctAnswers: 0,
+            passed: false,
+            showModal: false,
+        });
+        setRemainingTime(quiz.time); // Reset the timer
+        setShuffledQuestions(shuffleArray(quiz.questions));
+    };
+
     const shuffleArray = (array: any[]) => {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -98,7 +122,31 @@ const Quiz: React.FC = () => {
         }
         return array;
     };
-    
+
+    useEffect(() => {
+        if (quizStarted) {
+            timerRef.current = setInterval(() => {
+                setRemainingTime((prev) => {
+                    if (prev === 0) {
+                        clearInterval(timerRef.current as number);
+                        // Submit the quiz and show results immediately
+                        if (!isQuizFinished) {
+                            onClickNext();
+                        }
+                        onShowResult();
+                        return prev;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => {
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+            }
+        };
+    }, [quizStarted, isQuizFinished, onClickNext, onShowResult]);
+
     return (
         <React.Fragment>
             <Head>
@@ -119,7 +167,8 @@ const Quiz: React.FC = () => {
                             <div>
                                 <div className="text-3xl font-bold">Quiz</div>
                                 {/* Display the timer */}
-                                <div className="text-xl font-semibold mb-2">
+                                <div className="text-xl font-semibold my-2">{question}</div>
+                                <div className="text-md my-1">
                                     Time remaining: {remainingTime} seconds
                                 </div>
                                 {shuffledQuestions[activeQuestion]?.choices.map((val: string, key: number) => {
@@ -137,11 +186,21 @@ const Quiz: React.FC = () => {
                                         </div>
                                     );
                                 })}
-                                <Button
-                                    className="w-fit mx-5 my-5"
-                                    action={!isQuizFinished ? onClickNext : onShowResult}
-                                    text={!isQuizFinished ? "Next" : "Show Result"}
-                                />
+                                <div className="flex gap-x-5">
+                                    <Button
+                                        className="w-fit mx-5 my-5"
+                                        action={!isQuizFinished ? onClickNext : onShowResult}
+                                        text={!isQuizFinished ? "Next" : "Show Result"}
+                                    />
+                                    {/* Add the stop quiz button */}
+                                    {!isQuizFinished && (
+                                        <Button
+                                            className="w-fit mx-5 my-5"
+                                            action={onStopQuiz}
+                                            text="Stop Quiz"
+                                        />
+                                    )}
+                                </div>
                             </div>
                         )}
                         {isQuizFinished && (
@@ -150,21 +209,21 @@ const Quiz: React.FC = () => {
                                     setResult((prev) => ({ ...prev, showModal: false }));
                                     window.location.reload();
                                 }}
-                                score={result.score}
-                                totalQuestions={quiz.questions.length}
                             >
-                                <div className="text-2xl font-bold">
+                                <div className="text-3xl text-center font-bold my-3">
                                     {result.passed ? "Congratulations!" : "Sorry!"}
                                 </div>
-                                <div>
+                                <div className="text-center">
                                     You got {result.correctAnswers} out of {quiz.questions.length} questions right.
                                 </div>
-                                <div>Your score is {result.score}.</div>
-                                {result.passed ? (
-                                    <div>Congratulations, you passed the quiz!</div>
-                                ) : (
-                                    <div>Unfortunately, you did not pass the quiz. Please try again.</div>
-                                )}
+                                <div className="text-center my-2">Your score is {result.score}.</div>
+                                <div className='font-semibold text-lg my-3'>
+                                    {result.passed ? (
+                                        <div>Congratulations, you passed the quiz!</div>
+                                    ) : (
+                                        <div>Unfortunately, you did not pass the quiz. Please try again.</div>
+                                    )}
+                                </div>
                                 <Button className="w-fit m-2" action={onTryAgain} text="Try Again" />
                             </Modal>
                         )}

@@ -68,9 +68,10 @@ const QuizForm = () => {
         setQuestions(updatedQuestions);
     };
 
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        // create the quiz object with the collected information
+
+        // Create the quiz object with the collected information
         const quiz: Quiz = {
             topic,
             level,
@@ -78,9 +79,27 @@ const QuizForm = () => {
             time,
             questions,
         };
-        console.log(quiz);
-    };
 
+        try {
+            const response = await fetch('/api/saveQuiz', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(quiz),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save quiz.');
+            }
+
+            const result = await response.json();
+            console.log(result.message);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+    
     const handleChoiceChange = (questionId: number, choiceIndex: number, value: string) => {
         const updatedQuestions = questions.map((question) => {
             if (question.id === questionId) {
