@@ -16,8 +16,17 @@ const Quiz: React.FC = () => {
     const [quizStarted, setQuizStarted] = useState<boolean>(false);
     const [activeQuestion, setActiveQuestion] = useState<number>(0);
     const [selectedAnswer, setSelectedAnswer] = useState<string>("");
-    const [remainingTime, setRemainingTime] = useState<number>(quiz.time);
+    const [remainingTime, setRemainingTime] = useState<number>(quiz.time * 60 * 60); // Convert quiz.time to seconds
     const timerRef = useRef<number | NodeJS.Timeout | null>(null);
+    
+    const formatTime = (seconds: number) => {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const remainingSeconds = seconds % 60;
+
+        return `${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}:${remainingSeconds < 10 ? '0' + remainingSeconds : remainingSeconds}`;
+    };
+
     const [result, setResult] = useState<Result>({
         score: 0,
         correctAnswers: 0,
@@ -30,11 +39,19 @@ const Quiz: React.FC = () => {
     useEffect(() => {
         if (quizStarted) {
             setShuffledQuestions(shuffleArray(quiz.questions));
+            setRemainingTime(quiz.time * 60); // Convert quiz.time to seconds
         }
     }, [quizStarted]);
 
     const { question, choices } = shuffledQuestions[activeQuestion] || {};
     const correctAnswer = shuffledQuestions[activeQuestion]?.correctAnswer;
+
+    const onClickPrevious = () => {
+        if (activeQuestion > 0) {
+            setActiveQuestion((prev) => prev - 1);
+            setSelectedAnswer("");
+        }
+    };
 
     const onClickNext = () => {
         setResult((prev) => {
@@ -169,7 +186,7 @@ const Quiz: React.FC = () => {
                                 {/* Display the timer */}
                                 <div className="text-xl font-semibold my-2">{question}</div>
                                 <div className="text-md my-1">
-                                    Time remaining: {remainingTime} seconds
+                                    Time remaining: {formatTime(remainingTime)}
                                 </div>
                                 {shuffledQuestions[activeQuestion]?.choices.map((val: string, key: number) => {
                                     return (
@@ -189,8 +206,14 @@ const Quiz: React.FC = () => {
                                 <div className="flex gap-x-5">
                                     <Button
                                         className="w-fit mx-5 my-5"
+                                        action={onClickPrevious}
+                                        text="Previous"
+                                        disabled={activeQuestion === 0}
+                                    />
+                                    <Button
+                                        className="w-fit mx-5 my-5"
                                         action={!isQuizFinished ? onClickNext : onShowResult}
-                                        text={!isQuizFinished ? "Next" : "Show Result"}
+                                        text={activeQuestion === shuffledQuestions.length - 1 ? "Submit" : "Next"}
                                     />
                                     {/* Add the stop quiz button */}
                                     {!isQuizFinished && (
