@@ -24,12 +24,12 @@ const Dashboard = () => {
     return (
         <div>
             <h1>Your Quizzes</h1>
-            
+
             <Link href="/factory">
                 <a>Create a New Quiz</a>
             </Link>
 
-            <div>
+            {/* <div>
                 {quizzes.map((quiz) => (
                     <div key={quiz.id}>
                         <h2>{quiz.title}</h2>
@@ -42,7 +42,7 @@ const Dashboard = () => {
                         <button onClick={() => handleDeleteQuiz(quiz.id)}>Delete Quiz</button>
                     </div>
                 ))}
-            </div>
+            </div> */}
         </div>
     );
 };
