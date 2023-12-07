@@ -181,7 +181,7 @@ const QuizForm = () => {
                         </div>
                     ))}
                     <div className="flex justify-between">
-                        <button type="button" onClick={handleQuestionSubmit} className="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75">Add Question</button>
+                        <button type="button" onClick={handleQuestionSubmit} className="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75">Add Question</button>
                         <button type="submit" className="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75">Submit</button>
                     </div>
 
